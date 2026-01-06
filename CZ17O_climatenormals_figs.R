@@ -1,10 +1,8 @@
-#outline for this code: make climate normals figures for the 4 study sites considered
+#Make climate normals figures for the 4 study sites considered
 #started JRK January 2025
 
-#to include: air temp (min, mean, max), monthly precipitation
-#maybe include: relative humidity of the air? 
-#for each site, need to make a dataframe with climate normals.
-  #to do this, can pull from existing code that Elena made 
+#to include: monthly precipitation, relative humidity of overlying air, air temp (min, mean, max), 
+#for each site make a dataframe with climate normals.
 
 library(ggplot2)
 library(dplyr)
@@ -51,7 +49,6 @@ CRSclim$Year <- year(CRSclim$Date)
 CRSclim_monthly <- read.table(file = "~/Documents/Soil Water 17O Manuscript/data/climo data/Mojave climo data/Creosote_monthly.txt", skip = 7, header = T, sep = ",")
 CRSclim_monthly$Month <- month(CRSclim_monthly$Date)
 CRSclim_monthly$Year <- year(CRSclim_monthly$Date)
-
 
 JTclim_monthly <- read.table(file = "~/Documents/Soil Water 17O Manuscript/data/climo data/Mojave climo data/JTree_monthly.txt", skip = 7, header = T, sep = ",")
 JTclim_monthly$Month <- month(JTclim_monthly$Date)
