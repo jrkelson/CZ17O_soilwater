@@ -1,7 +1,7 @@
-#this script will compare the d18O-D17O values generated in our study with other types of obs'd waters
+#this script compares the d18O-D17O values generated in our study with other types of obs'd waters
 
-#started Feb 11
-#modifying dec 2 2025 to add Alexandre 2025 soil water data to the MS
+#other data comes from Aron et al. 2021 Chem Geo
+#with the addition of soil water data from Beverly et al. 2021 and Alexandre et al. 2025
 
 library(ggplot2)  
 library(ggpubr)
@@ -16,7 +16,7 @@ library(readr) #for read_delim
 
 ######## SET UP AND LOAD FILES######
 
-setwd("~/Documents/Soil Water 17O Manuscript/")
+setwd("~/Documents/Soil Water 17O Manuscript/data")
 path.to.figs <- "~/Documents/Soil Water 17O Manuscript/code_figures/MS_draft_figs/"
 path.to.figs.refined <- "~/Documents/Soil Water 17O Manuscript/code_figures/MS_refined_figs_v2/"
 
@@ -66,23 +66,17 @@ MStheme_isos <- theme_bw()+
 
 ##########BA modeling data######
 
-#BAdf <- read.csv("/Users/juliakelson/Documents/TripleO/soils/BarnesAllisonFigs/ForMSv8/BA1983_baserun.csv")
-#BAdrydf <- read.csv("/Users/juliakelson/Documents/TripleO/soils/BarnesAllisonFigs/ForMSv8/BA1983_dryrun.csv")
-#BAhumiddf <- read.csv("/Users/juliakelson/Documents/TripleO/soils/BarnesAllisonFigs/ForMSv8/BA1983_humidrun.csv")
-#copied these files to a data folder related to this manuscript 
-
+#soil evaporation model runs from Kelson et al. 2023 https://doi.org/10.1016/j.gca.2023.06.034
+#model run used in figure in manuscript is included in github repository, all else commented out
 BAdf <- read.csv("~/Documents/Soil Water 17O Manuscript/data/BarnesAllisonModeling_fromKelson2023/BA1983_baserun.csv")
-BAdrydf <- read.csv("~/Documents/Soil Water 17O Manuscript/data/BarnesAllisonModeling_fromKelson2023/BA1983_dryrun.csv")
-BAhumiddf <- read.csv("~/Documents/Soil Water 17O Manuscript/data/BarnesAllisonModeling_fromKelson2023/BA1983_humidrun.csv")
-BAdfMOJ <- read.csv("/Users/juliakelson/Documents/CZ17O_R/figs/Gold_figs/BA1983_baserunMOJ.csv")
+#BAdrydf <- read.csv("~/Documents/Soil Water 17O Manuscript/data/BarnesAllisonModeling_fromKelson2023/BA1983_dryrun.csv")
+#BAhumiddf <- read.csv("~/Documents/Soil Water 17O Manuscript/data/BarnesAllisonModeling_fromKelson2023/BA1983_humidrun.csv")
 
 BAdf$d.excess <- BAdf$dDsw -8 *BAdf$d18Osw
-BAdrydf$d.excess <- BAdrydf$dDsw -8 *BAdrydf$d18Osw
-BAhumiddf$d.excess <- BAhumiddf$dDsw -8 *BAhumiddf$d18Osw
-BAdfMOJ$d.excess <- BAdfMOJ$dDsw -8 *BAdfMOJ$d18Osw
+#BAdrydf$d.excess <- BAdrydf$dDsw -8 *BAdrydf$d18Osw
+#BAhumiddf$d.excess <- BAhumiddf$dDsw -8 *BAhumiddf$d18Osw
 
 ###BA trends
-
 BAdf$dp18Osw <- log(BAdf$d18Osw/1000+1)*1000
 BAdf$dp17Osw <- (BAdf$D17Osw/1000)+0.528*BAdf$dp18Osw
 SWL_BAdf <- lm(BAdf$d17Osw ~ BAdf$d18Osw)
@@ -90,47 +84,44 @@ summary(SWL_BAdf)
 lambda_empirical_BAdf <- lm(BAdf$dp17Osw~BAdf$dp18Osw)
 summary(lambda_empirical_BAdf)
 
-BAdrydf$dp18Osw <- log(BAdrydf$d18Osw/1000+1)*1000
-BAdrydf$dp17Osw <- (BAdrydf$D17Osw/1000)+0.528*BAdrydf$dp18Osw
-SWL_BAdrydf <- lm(BAdrydf$d17Osw ~ BAdrydf$d18Osw)
-summary(SWL_BAdrydf)
-lambda_empirical_BAdrydf <- lm(BAdrydf$dp17Osw~BAdrydf$dp18Osw)
-summary(lambda_empirical_BAdrydf)
+#BAdrydf$dp18Osw <- log(BAdrydf$d18Osw/1000+1)*1000
+#BAdrydf$dp17Osw <- (BAdrydf$D17Osw/1000)+0.528*BAdrydf$dp18Osw
+#SWL_BAdrydf <- lm(BAdrydf$d17Osw ~ BAdrydf$d18Osw)
+#summary(SWL_BAdrydf)
+#lambda_empirical_BAdrydf <- lm(BAdrydf$dp17Osw~BAdrydf$dp18Osw)
+#summary(lambda_empirical_BAdrydf)
 
-BAhumiddf$dp18Osw <- log(BAhumiddf$d18Osw/1000+1)*1000
-BAhumiddf$dp17Osw <- (BAhumiddf$D17Osw/1000)+0.528*BAhumiddf$dp18Osw
-lambda_empirical_BAhumiddf <- lm(BAhumiddf$dp17Osw~BAhumiddf$dp18Osw)
-summary(lambda_empirical_BAhumiddf)
+#BAhumiddf$dp18Osw <- log(BAhumiddf$d18Osw/1000+1)*1000
+#BAhumiddf$dp17Osw <- (BAhumiddf$D17Osw/1000)+0.528*BAhumiddf$dp18Osw
+#lambda_empirical_BAhumiddf <- lm(BAhumiddf$dp17Osw~BAhumiddf$dp18Osw)
+#summary(lambda_empirical_BAhumiddf)
 
 #model comparison in isotope space
-ggplot()+
-  geom_point(data = BAdf, aes(x = d18Osw, y = dDsw), size = 2, shape = 21, color = "black")+
-  geom_point(data = BAdrydf, aes(x = d18Osw, y = dDsw), size = 2, shape = 21, color = "red")+
-  geom_point(data = BAhumiddf, aes(x = d18Osw, y = dDsw), size = 2, shape = 21, color = "blue")+
-  geom_point(data = BAdfMOJ, aes(x = d18Osw, y = dDsw), size = 2, shape = 21, color = "gray")
+#ggplot()+
+#  geom_point(data = BAdf, aes(x = d18Osw, y = dDsw), size = 2, shape = 21, color = "black")+
+#  geom_point(data = BAdrydf, aes(x = d18Osw, y = dDsw), size = 2, shape = 21, color = "red")+
+#  geom_point(data = BAhumiddf, aes(x = d18Osw, y = dDsw), size = 2, shape = 21, color = "blue")+
 
-ggplot()+
-  geom_point(data = BAdf, aes(x = D17Osw, y = d.excess), size = 2, shape = 21, color = "black")+
-  geom_point(data = BAdrydf, aes(x = D17Osw, y = d.excess), size = 2, shape = 21, color = "red")+
-  geom_point(data = BAhumiddf, aes(x = D17Osw, y = d.excess), size = 2, shape = 21, color = "blue")+
-  geom_point(data = BAdfMOJ, aes(x = D17Osw, y = d.excess), size = 2, shape = 21, color = "gray")+
-  geom_point(data  = sw, aes(x = D17O_pmg, y = d_excess.mean), size = 2, shape = 22, fill = "black")+
-  geom_point(data  = mw, aes(x = D17O_pmg, y = d_excess.mean), size = 2, shape = 22, fill = "purple")
+#ggplot()+
+#  geom_point(data = BAdf, aes(x = D17Osw, y = d.excess), size = 2, shape = 21, color = "black")+
+#  geom_point(data = BAdrydf, aes(x = D17Osw, y = d.excess), size = 2, shape = 21, color = "red")+
+#  geom_point(data = BAhumiddf, aes(x = D17Osw, y = d.excess), size = 2, shape = 21, color = "blue")+
+#  geom_point(data  = sw, aes(x = D17O_pmg, y = d_excess.mean), size = 2, shape = 22, fill = "black")+
+#  geom_point(data  = mw, aes(x = D17O_pmg, y = d_excess.mean), size = 2, shape = 22, fill = "purple")
 
 #########other data sources############
 
 #run this first
-#~/Documents/TripleO/waterDB_FromPAron/published_17O_water_database.r
-#moved to OneDrive storage fall 2025
+#can be downloaded from Aron et al. 2021 chem geo https://doi.org/10.1016/j.chemgeo.2020.120026
 #/Users/juliakelson/Library/CloudStorage/OneDrive-IndianaUniversity/Research/TripleO/waterDB_FromPAron/published_17O_water_database.r
 
-
-#also add Beverly 2021 data
+#also add Beverly 2021 data, https://doi.org/10.1016/j.epsl.2021.116952
 #Table S13: δ18O, δD, and Δ17O water data. Values in ‰VSMOW-SLAP unless otherwise indicated.
 Beverly <- read_excel("~/Documents/Soil Water 17O Manuscript/data/Beverly2021_waterisos_supp_forR.xlsx")
 Beverly.sw <- Beverly %>% filter(Type == "Soil")
 
 #add Alexandre et al. 2025 data
+#https://doi.pangaea.de/10.1594/PANGAEA.984133
 Alexandre.sw <-read_delim("~/Documents/Soil Water 17O Manuscript/data/AlexandreA-etal_2025/datasets/6_Soil_water_isotopes.tab", skip = 42,delim = "\t", show_col_types = FALSE)
 Alexandre.mw <-read_delim("~/Documents/Soil Water 17O Manuscript/data/AlexandreA-etal_2025/datasets/5_Precipitation_isotopes.tab", skip = 33,delim = "\t", show_col_types = FALSE)
 Alexandre.pw <-read_delim("~/Documents/Soil Water 17O Manuscript/data/AlexandreA-etal_2025/datasets/7_Plant_water_isotopes.tab", skip = 61,delim = "\t", show_col_types = FALSE)
@@ -146,11 +137,6 @@ d18OD17Olm<- lm(sw$D17O_pmg~sw$d18O.mean)
 summary(d18OD17Olm)
 
 ########FIGURES #######
-
-#left off:
-#finish adding Alexandre plant water data to both plots
-#make soil water data squares?
-#change the legend?
 
 d18O_D17O <- ggplot() + 
   geom_point(data=plant.water, aes(x=dp18O,y=(dp17O-0.528*dp18O)*1000), color="darkgreen",size=1.5, shape = 17) + #triangle
@@ -178,7 +164,7 @@ d18O_D17O <- ggplot() +
   #scale_x_continuous(limits = c(-76,35), expand = c(0, 0), breaks=seq(-75,25,25)) +
   #scale_y_continuous(limits = c(-290,120), expand = c(0, 0), breaks=seq(-200,100,100)) +
   
-  geom_line(data = BAdfMOJ[BAdfMOJ$z>BAdfMOJ$z_ef[1],], aes(x = d18Osw, y = D17Osw), size = 1, shape = 21, color = "black")+
+  geom_line(data = BAdf[BAdf$z>BAdf$z_ef[1],], aes(x = d18Osw, y = D17Osw), size = 1, shape = 21, color = "black")+
   #geom_abline(slope = d18OD17Olm$coefficients[2], intercept = d18OD17Olm$coefficients[1])+
   theme(legend.position ="right") + 
   labs(x=expression(delta*"'"^"18"*"O (\u2030, VSMOW-SLAP)"), y=expression(Delta*"'"^"17"*"O (per meg, VSMOW-SLAP)")) +
@@ -214,7 +200,7 @@ dxs_D17O_2 <- ggplot()+
   geom_point(aes(x = sw$d_excess.mean, y= sw$D17O_pmg, fill = sw$siteID.1 ),shape = 21, size = 3)+
   scale_fill_manual(name=" ", values = site.1.colors.minor)+
   
-  geom_line(data = BAdfMOJ[BAdfMOJ$z>BAdfMOJ$z_ef[1],], aes(x = d.excess, y = D17Osw), size = 1,color = "black")+
+  geom_line(data = BAdfMOJ[BAdf$z>BAdf$z_ef[1],], aes(x = d.excess, y = D17Osw), size = 1,color = "black")+
   #geom_abline(intercept = DD$coefficients[1], slope = DD$coefficients[2])+
   scale_x_continuous(limits = c(-155,40), expand = c(0, 0), breaks=seq(-150,30,30)) +
   scale_y_continuous(limits = c(-205,110), expand = c(0,0), breaks = seq(-200, 100, 50))  +
@@ -223,14 +209,7 @@ dxs_D17O_2 <- ggplot()+
 plot(dxs_D17O_2)  
 
 isoscompare <- ggarrange(d18O_D17O, dxs_D17O_2, nrow =1, ncol =2, common.legend = TRUE)
+isoscompare
 ggsave(filename = "isos_compare_wAlexandre.pdf", plot = isoscompare, device = cairo_pdf, height=6,width=10.75, path = path.to.figs.refined)
-
-ggplot(data = sw, aes(x = d_excess.mean, y= D17O_pmg ))+
-  geom_point(fill = "orange",shape = 21, size = 3)+
-  geom_smooth( method='lm')
-  
-
-  
-
 
 

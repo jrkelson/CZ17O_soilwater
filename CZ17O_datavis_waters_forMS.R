@@ -1,12 +1,9 @@
-#preliminary plotting of CZ17O  WATERS data
-#started jrk 7/14/22
-#updated Aug, Feb 2023 to include soil waters
-#updated March 2023 with meteoric waters run on Picarro by Kirsten
-#updating On June 1, 2023 with triple oxygen isotope data run on R 26
-#we have triple oxygen isotope data from R22, R24, and R26
-#updated on June 13 2023 with triple oxygen isotope data on R27 up through "Data_2688 IPL-17O-4845 IPL21W-2064-R27-2" (session not complete)
+#plotting CZ17O  WATERS data into a summary panel (Fig 3) and depth profiles for each site (Figs 5,6,7,8)
+#also calculates lambda_soil and lambda_met value
+#includes d18O and d2H data from Picarro/CRDS
+#and triple O data from IRMS
+#starts with mw.csv and sw.csv, files that have combined isotope data and metadata
 
-#copied from CZ17O_dataviz_waters_Goldschmidt, made Aug 19 2024 making figures for gldschmidt talk
 library(ggplot2)  
 library(ggpubr)
 library(scales)
@@ -17,106 +14,13 @@ library(readxl)
 library(plotly)
 library(stringr)
 
-########STEP 1: read in and organize data, merging picarro and IRMS data ###########
-setwd("~/Documents/Soil Water 17O Manuscript/")
-path.to.figs <- "~/Documents/Soil Water 17O Manuscript/code_figures/MS_draft_figs/"
-path.to.figs.refined <- "~/Documents/Soil Water 17O Manuscript/code_figures/MS_refined_figs_v2/"
+########STEP 1: read in mw and sw data, merged picarro and IRMS data ###########
 
-##D17O data, avgs and errors calculated in create_CZ17O_D17O_summary_sw.R from cor.data.all.csv files, up to date as of Oct 2024
-TripleData <- read.csv("~/Documents/Soil Water 17O Manuscript/data/CZ17O_TripleO_iso_data.csv", header = T)
-TripleData$d18O_IRMS <-(exp(TripleData$dp18O/1000)-1)*1000 #unpriming the dp18O from Triple Dog, measured as O2
-TripleData_sw <- TripleData %>% filter(Water.Type == "Soil")
-TripleData_metw <- TripleData %>% filter(Water.Type == "Meteoric")
+mw <- read.csv("~/Documents/Soil Water 17O Manuscript/data/mw.csv")
+sw <- read.csv("~/Documents/Soil Water 17O Manuscript/data/sw.csv")
 
-#Picarro data generated on the UMich Picarro, run by Daeun Lee, K Andrews
-#correct by Julia with script modified from Anne, Rachel
-#also has metadata (location, analysis info), merged in Picarro.JoinMetada.CZ17O.R script
-PicarroData_met_full <- read.csv("~/Documents/Soil Water 17O Manuscript/data/CZ17O_met_Picarro_iso_and_meta_data.csv", header = T)
-PicarroData_sw_full <- read.csv("~/Documents/Soil Water 17O Manuscript/data/CZ17O_sw_Picarro_iso_and_meta_data.csv", header = T)
-
-#need to add metadata for five samples with failed Picarro runs that have D17O data
-metinfo <- read_excel(path = "~/Documents/Soil Water 17O Manuscript/data/IPL_Waters_EARTH_crowdsource.xlsx")
-metinfo$IPL.num <- sub("IPL", "IPL-", metinfo$IPL.Number) 
-needed <- metinfo %>% filter(IPL.Number =="IPL22W-2000" | IPL.Number == "IPL21W-2063" | IPL.Number == "IPL23W-2066" |
-                               IPL.Number == "IPL23W-2069" | IPL.Number == "IPL23W-2077") #these are the five samples with unreliable picarro data
-
-needed <- needed %>% mutate(N = NA, Session = NA, d18O.sd = NA, d18O.se = NA, d18O.2se = NA, d18O.mean = NA, 
-                            d2H.sd = NA, d2H.se = NA, d2H.2se = NA, d2H.mean = NA, d_excess.sd = NA, d_excess.mean = NA) %>%
-  mutate(IPL.num = sub("IPL2", "IPL-2", needed$IPL.Number )) %>%
-  mutate(Identifier_1 = IPL.Number, Identifier_2 = "CZ17O-met") %>% 
-  mutate(siteID.2 = case_when(Location.other == "Pinyon Juniper Station, Mojave National Preserve" ~ "PJ",
-                              Location.other == "Nancy Gulch" ~ "Nancy Gulch",
-                              Location.other == "Well" ~ "DSC",
-                              Location.other == "Rock Spring, Mojave National Preserve" ~ "RockSpring",
-                              Location.other == "UTEP" ~ "UTEP")) %>%
-  mutate(siteID.1 = case_when(City == "Reynolds Creek" ~ "REY",
-                              City == "DSC, Zzyzx CA" ~ "MOJ",
-                              City == "Kelso" ~ "MOJ",
-                              City == "El Paso" ~ "JOR"))
-#needed$IPL.num.simple <- c(2000, 2063, 2066, 2069, 2077)
-#reorder the columns so they are identical in order to PicarroData_met_full
-needed <- needed %>% select(IPL.num, Identifier_1, N, Session, Identifier_2, d18O.sd, d18O.se, d18O.2se, d18O.mean, 
-                            d2H.sd, d2H.se, d2H.2se,d2H.mean, d_excess.sd, d_excess.mean, IPL.Number, Person, Contact.email, Date.Collected, Water.Type,
-                            Location.other, City, State, Country, Sample.Comments, Lat, Long, Elev, siteID.1, siteID.2) #left off here at the end of writing group
-
-needed$d18O.mean[needed$Identifier_1 == "IPL23W-2066"] = -12.68  #values taken from chem correct
-needed$d2H.mean[needed$Identifier_1 == "IPL23W-2066"] = -92.09 #values taken from chem correct
-needed$d_excess.mean[needed$Identifier_1 == "IPL23W-2066"] = 9.32  #values taken from chem correct
-
-needed$d18O.mean[needed$Identifier_1 == "IPL23W-2069"] = -8.78  #values taken from chem correct
-needed$d2H.mean[needed$Identifier_1 == "IPL23W-2069"] = -62.85 #values taken from chem correct
-needed$d_excess.mean[needed$Identifier_1 == "IPL23W-2069"] = 7.41  #values taken from chem correct
-
-
-needed$d18O.mean[needed$Identifier_1 == "IPL21W-2063"] = -8.2  #values taken from chem correct
-needed$d2H.mean[needed$Identifier_1 == "IPL21W-2063"] = -65.1 #values taken from chem correct
-needed$d_excess.mean[needed$Identifier_1 == "IPL21W-2063"] = 0.50090813  #values taken from chem correct
-
-
-PicarroData_met_full <- rbind(needed, PicarroData_met_full)    #join with the rest of the Picarro data                      
-
-
-#####merge D17O data and Picarro data######## - double check that this is working now that I have ESGR data!!
-#merging based on the last 4 digits of the IPL num, which are unique, but avoids inconsistencies in the namings of the year
-TripleData_metw <- TripleData_metw %>% mutate(IPL.num.simple = str_sub(sample.ID, -4)) %>% mutate(IPL.num.simple = gsub('-','',IPL.num.simple))
-PicarroData_met_full <- PicarroData_met_full %>% mutate(IPL.num.simple = str_sub(IPL.num, -4))%>% mutate(IPL.num.simple = gsub('-','',IPL.num.simple))
-mw <- merge(PicarroData_met_full, TripleData_metw, by = "IPL.num.simple", all.x = TRUE)
-mw$Date.Collected <- as.Date(as.numeric(mw$Date.Collected), origin = "1899-12-30")
-mw <- mw %>% rename(N.IRMS = N.y, N.Picarro = N.x) %>% select(-IPL.Number, -Water.Type.y, -Identifier_1) %>%
-         rename(Water.Type = Water.Type.x, date.collection = Date.Collected) # a little clean up
-mw$siteID.1[mw$IPL.num.simple == 1913] <- "MOJ"
-mw$Water.Type[mw$IPL.num.simple == 2072] <- "Precipitation" #correcting a typo
-
-
-mw <-mw[!mw$IPL.num.simple == 1954,] #this sample looks very evaporated, probabyl happened during transport not during precip, HOR d18O + 14, dexcess-140
-mw <-mw[!mw$IPL.num.simple == 2018,] #this sample looks very evaporated, probabyl happened during transport not during precip, ESGR d18O of +4, dexcess of -40
-mw <-mw[!mw$IPL.num.simple == 2066,] #this is the Mojave snow sample, removing from the dataset because d18O/dD data was poor, it's not very representative of anything meaningful in the system because snow ablates hours after it falls (observed in the field)
-mw <-mw[!mw$IPL.num.simple == 2124,] #this is a Mojave lid sample, removing from the dataset because it's not representative of natural met waters
-mw <-mw[!mw$IPL.num.simple == 2055,] #this is a Mojave lid sample, removing from the dataset because it's not representative of natural met waters
-
-
-TripleData_sw <- TripleData_sw %>% rename(Identifier_1 = sample.ID) #this makes a new column, doesn't rename the column
-sw <- merge(PicarroData_sw_full, TripleData_sw, by = "Identifier_1", all.x = TRUE)
-sw <- sw %>% rename(N.IRMS = N.y, N.Picarro = N.x, Water.Type = Water.Type.x)  %>% select(-Water.Type.y)
-sw$date.collection <- as.Date(as.numeric(sw$date.collection), origin = "1899-12-30")
-sw$date.distilled <- as.Date(as.numeric(sw$date.distilled), origin = "1899-12-30")
-sw$siteID.1[sw$siteID.1 == "Rey"] <- "REY"
-sw <- sw[!(sw$SampleID == "ESGR-30-Mar21"),] #removing two samples that sat for a year on the shelf before being distilled, look very evaporated
-sw <- sw[!(sw$Identifier_1 == "sw164"),] #removing two samples that sat for a year on the shelf before being distilled, look very evaporated, also sample was measured one year earlier and value is more reasonable
-sw <- sw[!(sw$Identifier_1 == "sw166"),] #removing two samples that sat for a year on the shelf before being distilled, look very evaporated, also sample was measured one year earlier and value is more reasonable
-sw <- sw[!(sw$Identifier_1 == "sw136"),] #removing a sample that looks problematic from storage perspective - didnt fill the insert, sample looks evaporated
-
-
-sw <- sw[!is.na(sw$Identifier_1),] #not sure why this is needed
-
-
-write.csv(sw,"sw.csv")
-write.csv(mw,"mw.csv")
-
-
-###### MeanWeightedP values entered from spreadsheet, updated picarro data 12/31/24 #####
+###### MeanWeightedP values calculated in other code#####
 mean.weighted.precip.MOJ.d18O <- -7.315 #Weighted_Precip_SMichigan.R in weighted precip code in sw manuscript folder, Dec 31 2024
-
 mean.weighted.precip.MOJ.d2H <- -57.078
 mean.weighted.precip.MOJ.dexcess <- mean.weighted.precip.MOJ.d2H - mean.weighted.precip.MOJ.d18O*8
 
@@ -190,85 +94,6 @@ median(abs(swduplicates$d18O_diff))
 
 mean(abs(swduplicates$d18O_diff))
 
-############Picarro vs. IRMS##############
-#check to see that the d18O values match from Picarro to Triple Dog - MET WATERS only (not soil waters)
-instrument_compare <- ggplot()+
-  geom_point(aes(x = sw$d18O_IRMS, y= sw$d18O.mean, color = sw$siteID.1)) +
-  geom_point(aes(x = mw$d18O_IRMS, y= mw$d18O.mean, color = mw$siteID.1)) +
-  
-  geom_line(aes (x = c(-15, 0, 15), y = c(-15, 0, 15)))+
-  #xlab("d18O from IRMS")+
-  #ylab("d18O from Picarro")+
-  xlab(expression(paste(delta^{18}, "O (‰, SMOW) from IRMS")))+
-  ylab(expression(paste(delta^{18}, "O (‰, SMOW) from CRDS")))+
-  
-  scale_color_manual(name=" ", values = site.1.colors)+
-  MStheme_isos
-# they plot on the 1:1 line, good
-instrument_compare
-
-ggsave(filename = "Picarro-IRMS_d18O_comparison.pdf", plot = instrument_compare, device = cairo_pdf, height=4,width=5, path = path.to.figs)
-
-ggplot()+
-  geom_point(aes(y = sw$d18O.mean - sw$d18O_IRMS, x= sw$d18O.mean, color = sw$siteID.1)) 
-
-ggplot()+
-  geom_point(aes(y = mw$d18O.mean - mw$d18O_IRMS, x= mw$d18O.mean, color = mw$siteID.1)) 
-
-#############general exploration / SUMMARY FIGURE#######
-#dexcess and D17O should correlate 
-
-DD <- lm(mw$D17O_pmg~mw$d_excess.mean)
-summary(DD)
-
-DD <- lm(precip$D17O_pmg~precip$d_excess.mean)
-summary(DD)
-
-ggplot()+
-  geom_errorbar(aes(x = sw$d_excess.mean, 
-                    ymin  = sw$D17O_pmg - sw$D17O_err, ymax  = sw$D17O_pmg + sw$D17O_err))+ 
-  geom_point(aes(x = sw$d_excess.mean, y= sw$D17O_pmg, fill = sw$siteID.1), size = 5, color = "black", shape = 21, alpha = 0.5)+
-  geom_errorbar(aes(x = mw$d_excess.mean, 
-                    ymin  = mw$D17O_pmg - mw$D17O_err, ymax  = mw$D17O_pmg + mw$D17O_err))+ 
-  geom_point(aes(x = mw$d_excess.mean, y= mw$D17O_pmg, fill = mw$siteID.1), size = 5, color = "black", shape = 23)+
-  theme_bw()+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  #xlab(expression(paste(delta^"'18"*"O (‰, SMOW-SLAP)")))+
-  xlab(expression(paste(italic("d"),"-excess ‰")))+
-  ylab(expression(Delta^"'17"*"O (pmg, SMOW-SLAP)"))+
-  scale_fill_manual(name=" ", values = site.1.colors)
-
-ggsave(filename = "dexcess-D17O_WATERS.pdf", plot = last_plot(), device = cairo_pdf, height=6,width=10, path = path.to.figs)
-
-
-
-#d18O vs D17O, all waters
-ggplot()+
-  geom_errorbar(data = sw, aes(x = dp18O, ymin  = D17O_pmg - D17O_err, ymax  = D17O_pmg + D17O_err), width = 0)+ 
-  geom_errorbar(data = mw, aes(x = dp18O, ymin  = D17O_pmg - D17O_err, ymax  = D17O_pmg + D17O_err), width = 0)+ 
-  
-  geom_point(data = mw, aes(x = dp18O, y= D17O_pmg, fill = siteID.1), shape = 23, color = "black", size = 3)+
-  geom_point(data = sw, aes(x = dp18O, y= D17O_pmg, fill = siteID.1),color = "black", shape = 21, size = 3, alpha = 0.5)+
-  scale_fill_manual(values = site.1.colors)+
-  
-  #lines - doesnt look great, may need to modify
-  geom_smooth(data = REYsw,  aes(x = dp18O, y= D17O_pmg), method = "lm", se = FALSE, color = REYcolor)+
-  geom_smooth(data = REYmetw,  aes(x = dp18O, y= D17O_pmg), method = "lm", se = FALSE, color = REYcolor.minor)+
-  
-  geom_smooth(data = JORsw,  aes(x = dp18O, y= D17O_pmg), method = "lm", se = FALSE, color = JORcolor)+
-  geom_smooth(data = JORmetw,  aes(x = dp18O, y= D17O_pmg), method = "lm", se = FALSE, color = JORcolor.minor)+
-  
-  geom_smooth(data = MOJsw,  aes(x = dp18O, y= D17O_pmg), method = "lm", se = FALSE, color = MOJcolor)+
-  geom_smooth(data = MOJmetw,  aes(x = dp18O, y= D17O_pmg), method = "lm", se = FALSE, color = MOJcolor.minor)+
-  
-  geom_smooth(data = ESGRsw,  aes(x = dp18O, y= D17O_pmg), method = "lm", se = FALSE, color = ESGRcolor)+
-  geom_smooth(data = ESGRmetw,  aes(x = dp18O, y= D17O_pmg), method = "lm", se = FALSE, color = ESGRcolor.minor)+
-  
-  theme_bw()+theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank()) + 
-  xlab(expression(paste(delta^"'18"*"O (‰, SMOW-SLAP)")))+
-  ylab(expression(Delta^"'17"*"O (pmg, SMOW-SLAP)"))
-
-ggsave(filename = "dp18O-D17O_WATERS.pdf", plot = last_plot(), device = cairo_pdf, height=6,width=10, path = path.to.figs)
-
 
 #####calculate correlations in precipitation values#######
 heavyprecip <- precip %>% filter(d18O.mean > -5)
@@ -301,13 +126,13 @@ summary(line3)
 line4 <- lm(sw$D17O_pmg~ sw$d_excess.mean)
 summary(line4)
 
-ggplot(data = sw, aes(x = d_excess.mean, y= D17O_pmg ))+
-  geom_point(fill = "orange",shape = 21, size = 3)+
-  geom_smooth( method='lm')+
-  geom_abline(slope = line4$coefficients[2], intercept = line4$coefficients[1])
+#ggplot(data = sw, aes(x = d_excess.mean, y= D17O_pmg ))+
+#  geom_point(fill = "orange",shape = 21, size = 3)+
+#  geom_smooth( method='lm')+
+#  geom_abline(slope = line4$coefficients[2], intercept = line4$coefficients[1])
 
 
-###########seasonality analysis############
+###########seasonality analysis for supporting information figure############
 #average analyses
 mean(precip$D17O_pmg, na.rm = TRUE)
 
@@ -466,19 +291,6 @@ ggplot()+
 
 
 ######### explore soil waters, calculate lambda values#####
-p100 <- ggplot()+
-  geom_point(data = sw, aes(x = d18O.mean, y= d2H.mean, fill = siteID.1), size = 3, shape = 22, color = "black")+
-  scale_fill_manual(name=" ", values = site.1.colors.minor)+
-  geom_abline(slope = 8, intercept = 10, linewidth = 0.5)+
-  theme_bw()+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  xlab(expression(paste(delta^{18}, "O (‰, SMOW)")))+
-  ylab(expression(paste(delta^{2}, "H (‰, SMOW)")))
-
-p100
-  
-ggplotly(p100)
-#ggsave(filename = "d18O-dD_ALLsoilwaters.pdf", plot = p100, device = cairo_pdf, height=6,width=10, path = path.to.figs)
 
 ##calculate the d'18O'd'17O relationship (lambda) for soil waters
 lambda_empirical_sw <- lm(sw$dp17O~sw$dp18O) 
@@ -494,13 +306,7 @@ summary(lambda_empirical_swJOR)
 summary(lambda_empirical_swMOJ)
 summary(lambda_empirical_swESGR)
 
-pMOJ <- ggplot()+
-  geom_point(data = MOJsw, aes (x = dp18O, y = D17O_pmg, color = siteID.2))+
-  geom_point(data = JORsw, aes(x = dp18O, y = D17O_pmg), color = "black")
-pMOJ
-
-
-#break MOJ down by site
+#break MOJ down by site, not used
 CRSsw <- MOJsw %>% filter(siteID.2 == "CRS")
 JTsw <- MOJsw %>% filter(siteID.2 == "JT")
 PJsw <- MOJsw %>% filter(siteID.2 == "PJ")
@@ -511,7 +317,6 @@ lambda_empirical_swPJ <- lm(PJsw$dp17O~PJsw$dp18O)
 summary(lambda_empirical_swCRS)
 summary(lambda_empirical_swJT)
 summary(lambda_empirical_swPJ)
-
 
 trendALL <- lm(sw$D17O_pmg ~sw$d18O_IRMS)
 summary(trendALL)
@@ -539,13 +344,6 @@ mw.unevap <- mw %>% filter(Water.Type == "Marsh" | Water.Type == "Creek" |Water.
                   filter(d18O.mean<10)
 empirical_LMWL <- lm(mw.unevap$d2H.mean~mw.unevap$d18O.mean)
 summary(empirical_LMWL)
-
-p1 <- ggplot()+
-  geom_point(data = mw, aes(x = d18O.mean, y = d2H.mean, color = Water.Type, shape = siteID.1), size = 5)+
-  geom_point(data = mw.unevap, aes(x = d18O.mean, y = d2H.mean), color = "black")+
-   geom_abline(slope = 8)+
-  geom_abline(slope = empirical_LMWL$coefficients[2])
-ggplotly(p1)
 
 empirical_LMWL_REY <- lm(REYmetw$d2H.mean~REYmetw$d18O.mean)
 empirical_LMWL_JOR <- lm(JORmetw$d2H.mean~JORmetw$d18O.mean)
@@ -616,53 +414,16 @@ empirical_SWL_JOR <- lm(JORsw$d2H.mean~JORsw$d18O.mean)
 empirical_SWL_MOJ <- lm(MOJsw$d2H.mean~MOJsw$d18O.mean)
 empirical_SWL_ESGR <- lm(ESGRsw$d2H.mean~ESGRsw$d18O.mean)
 
-
 summary(empirical_SWL_REY)
 summary(empirical_SWL_JOR)
 summary(empirical_SWL_MOJ)
-
 summary(empirical_SWL_ESGR)
 
-lambda_soil_slopes <-c(0.5210,
-                       0.5180,
-                       0.5216,
-                       0.5251,
-                       0.5223, 
-                       0.5255,
-                       0.5194,
-                       0.5221)
-
-lamdba_soil_SE <- c(0.0006,
-                    0.0015,
-                    0.0009,
-                    0.0032,
-                    0.0006,
-                    0.0014,
-                    0.0010,
-                    0.0032)
-
-
-ggplot()+
-  geom_errorbar(aes(x = c("a_REY", "b_JOR", "c_MOJ", "d_ESGR", "e_all", "f_CRS", "g_JT", "h_PJ"), y = lambda_soil_slopes, ymin = c(lambda_soil_slopes - lamdba_soil_SE), ymax = c(lambda_soil_slopes+lamdba_soil_SE)))
-
-SWL_slopes <- c(3.97,
-                1.68,
-                2.46,
-                7.48,
-                3.72)
-SWL_SE <- c(0.41,
-            0.36,
-            0.22,
-            0.50,
-            0.23)
-
-ggplot()+
-  geom_errorbar(aes(x = c("a_REY", "b_JOR", "c_MOJ", "d_ESGR", "e_all"), y = SWL_slopes, ymin = c(SWL_slopes - SWL_SE), ymax = c(SWL_slopes+SWL_SE)))
 
 
 
 ################# Reynolds ###########
-#citation:
+#citation for published reynolds data:
 #Lohse, Kathleen; Schegel, Melissa; Souza, Jennifer; Warix, Sara; MacNeille, Ruth; Murray, Erin; Radke, Anna; Godsey, Sarah E.; Seyfried, Mark S.; and Finney, Bruce. (2022). Dataset for Stable Isotopes of Precipitation, Surface Water, Spring Water, and Subsurface Waters at the Reynolds Creek Experimental Watershed and Critical Zone Observatory, Southwestern Idaho, USA [Data set]. Retrieved from 10.18122/reynoldscreek.29.boisestate
 path.to.data <- "~/Documents/Soil Water 17O Manuscript/data/"
 
@@ -670,15 +431,6 @@ RCEWmet <- read.csv(paste(path.to.data, "RCEWWaterIsotopesFINAL_Lohse2022.csv", 
 RCEWmet.precip <- RCEWmet %>% filter(SubType == "Precipitation")
 LMWL.REY.all <- lm(c(REYprecip$d2H.mean,RCEWmet.precip$dD_SMOW ) ~ c(REYprecip$d18O.mean,RCEWmet.precip$d18O_SMOW) )
 summary(LMWL.REY.all)
-
-trendREY <- lm(REYmerged_sw$D17O ~REYmerged_sw$d18O_fromTripleDog)
-
-ggplot()+
-  geom_point(data = REYsw, aes(x = d18O.mean, y = d_excess.mean), fill = REYcolor, color ="black", shape = 21, size = 3)+
-  geom_point(data = REYmetw, aes(x = d18O.mean, y = d_excess.mean), fill = REYcolor.minor, color = "black", shape = 21, size = 3)+
-  geom_point(data = RCEWmet, aes(x = d18O_SMOW, y = d_excess), color = REYcolor.minor, size = 1.5, alpha = 0.5)+
-  theme_bw()
-ggsave(filename = "d18O-dexcess_REY_soilandmet.pdf", plot = last_plot(), device = cairo_pdf, height=5,width=5, path = path.to.figs)
 
 ##depth profiles for Reynolds
 
@@ -730,11 +482,7 @@ tryprof3
 
 profsummREY<- ggarrange(tryprof, tryprof2, tryprof3, ncol = 3, legend = "none")
 
-profsummREY #not sure why common legend isnt working
-#ggsave(filename = "REYprofs_newcolors.pdf", plot = profsummREY, device = cairo_pdf, height=6,width=12, path = path.to.figs)
-
 #add box and whisker plots
-
 REYsw$depth_cat <- NA
 REYsw$depth_cat[REYsw$bottom.depth <= 5] <- "f__0 to 5"
 REYsw$depth_cat[REYsw$bottom.depth > 5 & REYsw$bottom.depth <= 25] <- "e_5 to 25"
@@ -771,9 +519,6 @@ REYboxd18O <- ggplot()+
   ylab(expression(paste(delta^{18}, "O (‰, SMOW)")))+
   MStheme_isos
 REYboxd18O
-
-stat_boxplot()
-stat_boxplot(data = REYdataforboxes, aes(x = depth_cat, y = d18O.mean))
 
 REYboxdxs <- ggplot()+
   geom_boxplot(data = REYdataforboxes, aes(x = depth_cat, y = d_excess.mean, fill= soilormet), outlier.shape = NA)+
@@ -814,93 +559,15 @@ ggsave(filename = "REYboxes.pdf", plot = REYboxes, device = cairo_pdf, height=3,
 REYprofandboxes <- ggarrange(profsummREY, REYboxes, nrow = 2, ncol = 1, heights = c(1, 0.5))
 ggsave(filename = "REYprofandboxes.pdf", plot = REYprofandboxes, device = cairo_pdf, height=8.5,width=11, path = path.to.figs)
 
-#calculate DD17O Reynolds
+#calculate means Reynolds
 mean(REYprecip$D17O_pmg, na.rm = TRUE) - mean(REYdataforboxes$D17O_pmg[REYdataforboxes$depth_cat == "c_40 to 65"], na.rm = TRUE)
-#mean(REYprecip$d18O.mean, na.rm = TRUE) - mean(REYdataforboxes$d18O.mean[REYdataforboxes$depth_cat == "c_40 to 65"], na.rm = TRUE)
-#mean(REYprecip$d_excess.mean, na.rm = TRUE) - mean(REYdataforboxes$d_excess.mean[REYdataforboxes$depth_cat == "c_40 to 65"], na.rm = TRUE)
-
 mean.weighted.precip.REY.d18O - mean(REYdataforboxes$d18O.mean[REYdataforboxes$depth_cat == "c_40 to 65"], na.rm = TRUE)
 mean.weighted.precip.REY.d2H - mean(REYdataforboxes$d2H.mean[REYdataforboxes$depth_cat == "c_40 to 65"], na.rm = TRUE)
-
 mean.weighted.precip.REY.dexcess- mean(REYdataforboxes$d_excess.mean[REYdataforboxes$depth_cat == "c_40 to 65"], na.rm = TRUE)
 
 
-
 ######### Mojave ###########
-
-MOJmetw.unevap <- MOJmetw %>% filter(Water.Type == "Precipitation" | Water.Type == "Spring" | Water.Type == "Snow")
-  #ignores well samples, puddle samples
-  
-MOJ_LMWL <- lm(formula = d2H.mean ~ d18O.mean, data = MOJmetw)
-MOJ_LMWL2 <- lm(formula = d2H.mean ~ d18O.mean, data = MOJmetw.unevap)
-
-MOJ_SWL <- lm(formula = d2H.mean ~ d18O.mean, data = MOJsw)
-
-SMWL <- ggplot()+
-  geom_point(data = MOJmetw.unevap, aes(x = d18O.mean, y= d2H.mean), shape = 21, fill = "gray", size = 5)+
-  geom_smooth(data = MOJmetw,  aes(x = d18O.mean, y= d2H.mean), method = "lm", se = FALSE, color = "gray")+
-  geom_point(data = MOJsw, aes(x = d18O.mean, y= d2H.mean, fill = -bottom.depth), size = 5, shape = 22)+
-  scale_fill_gradient(low = MOJcolor, high = MOJcolor.minor)+  
-  
-  #geom_smooth(data = MOJsw,  aes(x = d18O.mean, y= d2H.mean), method = "lm", se = FALSE, color = MOJcolor)+
-  #geom_point(aes(x = mean.weighted.precip.MOJ.d18O, y = mean.weighted.precip.MOJ.d2H), size = 5)+
-  xlab(expression(delta^"18"*"O (\u2030)"))+
-  ylab(expression(delta^"2"*"H (\u2030)"))+
-  MStheme_isos+
-  theme(axis.title = element_text(size = 16),axis.text = element_text(size = 16))
-plot(SMWL)
-ggsave(filename = "d18O-dD_MOJ_soilandmet.pdf", plot = SMWL, device = cairo_pdf, height=5,width=6, path = path.to.figs)
-
-
-SMWL.dxs <- ggplot()+
-  geom_point(data = MOJmetw.unevap, aes(x = d18O.mean, y= d_excess.mean), shape = 21, fill = "gray", size = 5)+
-  geom_smooth(data = MOJmetw,  aes(x = d18O.mean, y= d_excess.mean), method = "lm", se = FALSE, color = "gray")+
-  geom_point(data = MOJsw, aes(x = d18O.mean, y= d_excess.mean, fill = -bottom.depth), size = 5, shape = 22)+
-  scale_fill_gradient(low = MOJcolor, high = MOJcolor.minor)+  
-  
-  #geom_smooth(data = MOJsw,  aes(x = d18O.mean, y= d_excess.mean), method = "lm", se = FALSE, color = MOJcolor)+
-  #geom_point(aes(x = mean.weighted.precip.MOJ.d18O, y = mean.weighted.precip.MOJ.d2H), size = 5)+
-  xlab(expression(delta^"18"*"O (\u2030)"))+
-  ylab(expression(italic(d)*"-excess"*" (\u2030)"))+
-  MStheme_isos+
-  theme(axis.title = element_text(size = 16),axis.text = element_text(size = 16))
-plot(SMWL.dxs)
-ggsave(filename = "d18O-dxs_MOJ_soilandmet.pdf", plot = SMWL.dxs, device = cairo_pdf, height=5,width=6, path = path.to.figs)
-
-
-#color by depth
-ggplot()+
-  geom_point(data = MOJmetw, aes(x = d18O.mean, y= d2H.mean),color = MOJcolor.minor, size = 3)+
-  geom_smooth(data = MOJmetw,  aes(x = d18O.mean, y= d2H.mean), method = "lm", se = FALSE, color = MOJcolor.minor)+
-  
-  geom_point(aes(x = mean(MOJmetw$d18O.mean), y = mean(MOJmetw$d2H.mean)), color = "black", size = 5)+
-  geom_point(data = MOJsw, aes(x = d18O.mean, y= d2H.mean, color = bottom.depth ), size = 3)+
-  #geom_smooth(data = REYsw,  aes(x = d18O, y= dD), method = "lm", se = FALSE, color = REYcolor.minor)+
-  theme_bw() 
-
-#color by sample date
-ggplot()+
-  geom_point(data = MOJmetw, aes(x = d18O.mean, y= d2H.mean),color = MOJcolor, size = 3)+
-  geom_smooth(data = MOJmetw,  aes(x = d18O.mean, y= d2H.mean), method = "lm", se = FALSE, color = MOJcolor)+
-  
-  geom_point(data = MOJsw, aes(x = d18O.mean, y= d2H.mean, color = factor(date.collection) ), size = 3)+
-  theme_bw()
-
-
-trendMOJ <- lm(MOJsw$D17O_pmg~ MOJsw$d18O_IRMS)
-
-ggplot()+
-  geom_point(data = MOJmetw, aes (x = d18O_IRMS, y = D17O_pmg, shape = Water.Type), color = MOJcolor.minor, size = 3)+
-  geom_point(data = MOJsw, aes(x = d18O_IRMS, y = D17O_pmg, color = siteID.2),  size = 3)+
-  #geom_point(data = BAdf, aes(x = d18Osw, y = D17Osw))+
-  geom_abline(slope = trendMOJ$coefficients[2], intercept = trendMOJ$coefficients[1])+
-  xlab("d18O")+
-  ylab("D17O")+
-  theme_bw()
-
-ggsave(filename = "d18O-D17O_MOJ_soilandmet.pdf", plot = last_plot(), device = cairo_pdf, height=5,width=6, path = path.to.figs)
-
-########depth profiles for MOJ########
+#depth profiles for MOJ########
 
 tryprofCRS <- ggplot(data = MOJsw %>% filter (siteID.2 == "CRS"))+
   #geom_path(aes(x = d18O.mean, y = -bottom.depth, group = date.collection), color = MOJcolor, size = 0.5)+
@@ -1077,13 +744,6 @@ print(counts)
 counts_D17O <- MOJdataforboxes %>% filter(!is.na(D17O_pmg)) %>% count(depth_cat)
 print(counts_D17O)
 
-#MOJdataforboxes <-  MOJdataforboxes %>% filter(depth_cat != "d_Puddle")
-#MOJdataforboxes <-  MOJdataforboxes %>% filter(depth_cat != "c_Well")
-#MOJdataforboxes <-  MOJdataforboxes %>% filter(depth_cat != "b_Snow")
-#MOJdataforboxes <-  MOJdataforboxes %>% filter(depth_cat != "a_Spring")
-#those data types just bulked up the plot and are not information
-
-
 MOJboxd18O <- ggplot()+
   geom_boxplot(data = MOJdataforboxes, aes(x = depth_cat, y = d18O.mean, fill= soilormet), outlier.shape = NA)+
   geom_jitter(data = MOJdataforboxes, aes(x = depth_cat, y = d18O.mean, fill = soilormet, shape = soilormet), color = "black")+
@@ -1135,12 +795,11 @@ MOJprofandboxes
 
 ggsave(file = "MOJprofandboxes.pdf", plot = MOJprofandboxes, width = 11.5, height = 10, device = cairo_pdf, path.to.figs)
 
-#calculate DD17O Reynolds
+#calculate DD17O 
 mean(MOJprecip$D17O_pmg, na.rm = TRUE) - mean(MOJsw$D17O_pmg[MOJsw$bottom.depth > 40], na.rm = TRUE)
 mean(MOJprecip$d18O.mean, na.rm = TRUE) - mean(MOJsw$d18O.mean[MOJsw$bottom.depth > 40], na.rm = TRUE)
 mean(MOJprecip$d2H.mean, na.rm = TRUE) - mean(MOJsw$d2H.mean[MOJsw$bottom.depth > 40], na.rm = TRUE)
 mean(MOJprecip$d_excess.mean, na.rm = TRUE) - mean(MOJsw$d_excess.mean[MOJsw$bottom.depth > 40], na.rm = TRUE)
-
 
 mean.weighted.precip.MOJ.d18O - mean(MOJsw$d18O.mean[MOJsw$bottom.depth > 40], na.rm = TRUE)
 mean.weighted.precip.MOJ.d2H  - mean(MOJsw$d2H.mean[MOJsw$bottom.depth > 40], na.rm = TRUE)
@@ -1148,37 +807,6 @@ mean.weighted.precip.MOJ.dexcess - mean(MOJsw$d_excess.mean[MOJsw$bottom.depth >
 
 
 #Jornada ###########
-ggplot()+
-  geom_point(data = JORmetw, aes(x = d18O.mean, y= d2H.mean), fill = JORcolor.minor, size = 3, shape = 21)+
-  geom_smooth(data = JORmetw,  aes(x = d18O.mean, y= d2H.mean), method = "lm", se = FALSE, color = JORcolor.minor)+
-  geom_point(data = JORsw, aes(x = d18O.mean, y= d2H.mean), fill = JORcolor, size = 3, shape = 22)+
-  geom_smooth(data = JORsw,  aes(x = d18O.mean, y= d2H.mean), method = "lm", se = FALSE, color = JORcolor)+
-  #add in a MWL for comparison
-  geom_abline(intercept = 10, slope = 8)+
-  #geom_abline(intercept = -8.7, slope = 6.3)+ #LMWL from gardea et al.
-  geom_point(aes(x = -5.8,y  = -40.5), color = "black", fill = JORcolor.minor, shape = 21, size = 5)+
-  MStheme_isos+
-  xlab("d18O")+
-  ylab("dD")
-
-ggplot()+
-  geom_point(data = JORsw, aes(x = d18O.mean, y = D17O_pmg), color = JORcolor, size = 3)+
-  geom_point(data = JORmetw, aes(x = d18O.mean, y = D17O_pmg, shape = Water.Type), color = JORcolor.minor, size = 3)+
-  MStheme_isos
-
-ggplot()+
-  geom_point(data = JORsw, aes(x = d18O.mean, y = d_excess.mean), color = JORcolor, size = 3)+
-  geom_point(data = JORmetw, aes(x = d18O.mean, y = d_excess.mean), color = JORcolor.minor, size = 3)+
-  MStheme_isos
-
-#ggplotly(p)
-ggsave(filename = "d18O-dexcess_JOR_soilandmet.pdf", plot = last_plot(), device = cairo_pdf, height=5,width=5, path = path.to.figs)
-
-JORprecip <- JORmetw %>% filter(Water.Type == "Precipitation")
-JORswdeep <- JORsw %>% filter(bottom.depth>55)
-
-JORtest <- JORprecip %>% filter(!is.na(D17O_pmg))
-
 
 #depth profiles for Jornada
 tryprofJOR <- ggplot(data = JORsw)+
@@ -1249,9 +877,6 @@ JORdataforboxes <- data.frame(d18O.mean = c(JORsw$d18O.mean, JORmetw$d18O.mean),
                               d_excess.mean  = c(JORsw$d_excess.mean, JORmetw$d_excess.mean), 
                               D17O_pmg = c(JORsw$D17O_pmg, JORmetw$D17O_pmg), depth_cat = c(JORsw$depth_cat, JORmetw$depth_cat), 
                               soilormet =c(JORsw$soilormet, JORmetw$soilormet) )
-
-#JORdataforboxes <-  JORdataforboxes %>% filter(depth_cat != "a_Spring")
-#those data types just bulked up the plot and are not information
 
 counts <- JORdataforboxes %>% count(depth_cat)
 print(counts)
@@ -1704,7 +1329,6 @@ ESGRp1 <- ggplot()+
   #scale_y_continuous(limits = c(-175,34), expand = c(0, 0), breaks=seq(-170,30,30)) 
 
 ESGRp1
-ggplotly(ESGRp1)
 
 
 ESGRp2 <- ggplot()+
@@ -1756,11 +1380,6 @@ ESGRp3
 
 #ESGRsumm <- ggarrange(ESGRp1, ESGRp2, ESGRp3, ncol = 3, common.legend = TRUE, legend = "right")
 ESGRsumm <- ggarrange(ESGRp1, ESGRp2, ESGRp3, ncol = 3, common.legend = TRUE, legend = "none")
-
-#not working, not sure why not, will extract in illustrator
-#ESGRleg <- get_legend(ESGRsumm)
-#as_ggplot(ESGRleg)
-
 
 multipanelsumm <- ggarrange(REYsumm, JORsumm, MOJsumm, ESGRsumm, nrow = 4)
 ggsave(filename = "isos_summ_rescaled.pdf", plot = multipanelsumm, device = cairo_pdf, height=8.25,width=10.75, path = path.to.figs.refined)
@@ -1899,8 +1518,5 @@ ggsave(filename = "alltogethersumm.pdf", plot = alltogethersumm, device = cairo_
 
 multipanelsumm_5panels <- ggarrange(REYsumm, JORsumm, MOJsumm, ESGRsumm,alltogethersumm, nrow = 5)
 ggsave(filename = "isos_summ_5panels.pdf", plot = multipanelsumm_5panels, width=8.4,height=10.5, path = path.to.figs.refined)
-
-
-
 
 
