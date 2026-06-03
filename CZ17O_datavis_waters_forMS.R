@@ -1088,6 +1088,7 @@ REYp1 <- ggplot()+
   
   geom_point(data = REYsw, aes(x = d18O.mean, y= d2H.mean, fill = -bottom.depth), size = 3, shape= 21)+
   geom_point(aes(x = mean.weighted.precip.REY.d18O, y= mean.weighted.precip.REY.d2H),fill = "yellow", size = 5, shape = 22)+
+  geom_abline(slope = 8, intercept = 10, color = "black", linetype = 2)+ #GMWL for comparison
   
   scale_fill_gradient(low = REYcolor, high = REYcolor.minor)+  
   #lines
@@ -1145,7 +1146,7 @@ REYp3 <- ggplot()+
   geom_smooth(data = REYsw,  aes(x = d18O.mean, y= D17O_pmg), method = "lm", se = TRUE, color = REYcolor.minor)+
   MStheme_isos+
   xlab(expression(delta^"18"*"O (\u2030)"))+
-  ylab(expression(Delta^"'17"*"O (pmg)"))+
+  ylab(expression(Delta^"'17"*"O (per meg)"))+
   scale_x_continuous(limits = c(-21,5), expand = c(0, 0), breaks=seq(-20,5,5)) +
   scale_y_continuous(limits = c(-55,53), expand = c(0, 0), breaks=seq(-50,50,20)) 
   
@@ -1160,16 +1161,25 @@ REYsumm <- ggarrange(REYp1, REYp2, REYp3, ncol = 3, nrow = 1,common.legend = TRU
 REYsumm
 
 #JORNADA three plots
+#in revision adding comparison to Arellano 2026 precip data from Odessa TX
+
+Arellano <- read.csv("/Users/juliakelson/Documents/Soil Water 17O Manuscript/data/Arellano_2026_S3_forR.csv")
+Odessa <- subset(Arellano, Site == "Odessa")
+
 JORp1 <- ggplot()+
   geom_point(data = JORprecip, aes(x = d18O.mean, y= d2H.mean),fill = JORcolor, size = 3, shape = 22)+
   geom_point(data = JORmetw[JORmetw$Water.Type != "Precipitation",], aes(x = d18O.mean, y= d2H.mean),fill = JORcolor, size = 3, shape = 23)+
   geom_point(data = JORsw, aes(x = d18O.mean, y= d2H.mean, fill = -bottom.depth), size = 3, shape= 21)+
   geom_point(aes(x = mean.weighted.precip.JOR.d18O, y= mean.weighted.precip.JOR.d2H),fill = "yellow", size = 5, shape = 22)+
   
+  geom_point(data = Odessa, aes(x = d18O, y = dD), fill = JORcolor, size =2, shape = 22, alpha = 0.5)+
+  
   scale_fill_gradient(low = JORcolor, high = JORcolor.minor)+  
   #lines
   geom_smooth(data = JORmetw,  aes(x = d18O.mean, y= d2H.mean), method = "lm", se = TRUE, color = JORcolor)+
   geom_smooth(data = JORsw,  aes(x = d18O.mean, y= d2H.mean), method = "lm", se = TRUE, color = JORcolor.minor)+
+  geom_abline(slope = 8, intercept = 10, color = "black", linetype = 2)+
+  
   MStheme_isos+
   xlab(expression(delta^"18"*"O (\u2030)"))+
   ylab(expression(delta^"2"*"H (\u2030)"))+
@@ -1185,6 +1195,8 @@ JORp2 <- ggplot()+
   geom_point(data = JORmetw[JORmetw$Water.Type != "Precipitation",], aes(x = d18O.mean, y= d_excess.mean),fill = JORcolor, size = 3, shape = 23)+
   geom_point(data = JORsw, aes(x = d18O.mean, y= d_excess.mean, fill = -bottom.depth), size = 3, shape= 21  )+
   geom_point(aes(x = mean.weighted.precip.JOR.d18O, y= mean.weighted.precip.JOR.dexcess),fill = "yellow", size = 5, shape = 22)+
+  
+  geom_point(data = Odessa, aes(x = d18O, y = d_excess), fill = JORcolor, size =2, shape = 22, alpha = 0.5)+
   
   scale_fill_gradient(low = JORcolor, high = JORcolor.minor)+  
   
@@ -1211,13 +1223,16 @@ JORp3 <- ggplot()+
   geom_point(data = JORsw, aes(x = d18O.mean, y= D17O_pmg, fill = -bottom.depth), size = 3, shape= 21)+
   geom_point(aes(x = mean.weighted.precip.JOR.d18O, y= mean(JORmetw$D17O_pmg, na.rm = TRUE)),fill = "yellow", size = 5, shape = 22)+
   
+  geom_point(data = Odessa, aes(x = d18O, y = D17O_permeg), fill = JORcolor, size =2, shape = 22, alpha = 0.5)+
+  
+  
   scale_fill_gradient(low = JORcolor, high = JORcolor.minor)+  
   #lines
   geom_smooth(data = JORprecip,  aes(x = d18O.mean, y= D17O_pmg), method = "lm", se = TRUE, color = JORcolor)+
   geom_smooth(data = JORsw,  aes(x = d18O.mean, y= D17O_pmg), method = "lm", se = TRUE, color = JORcolor.minor)+
   MStheme_isos+
   xlab(expression(delta^"18"*"O (\u2030)"))+
-  ylab(expression(Delta^"'17"*"O (pmg)"))+
+  ylab(expression(Delta^"'17"*"O (per meg)"))+
   scale_x_continuous(limits = c(-22,15), expand = c(0, 0), breaks=seq(-25,15,5)) +
   scale_y_continuous(limits = c(-155,52), expand = c(0, 0), breaks=seq(-150,50,30)) 
   #scale_x_continuous(limits = c(-25,15), expand = c(0, 0), breaks=seq(-25,15,5)) +
@@ -1244,6 +1259,7 @@ MOJp1 <- ggplot()+
   #lines
   geom_smooth(data = MOJprecip,  aes(x = d18O.mean, y= d2H.mean), method = "lm", se = TRUE, color = MOJcolor)+
   geom_smooth(data = MOJsw,  aes(x = d18O.mean, y= d2H.mean), method = "lm", se = TRUE, color = MOJcolor.minor)+
+  geom_abline(slope = 8, intercept = 10, color = "black", linetype = 2)+
   
   MStheme_isos+
   xlab(expression(delta^"18"*"O (\u2030)"))+
@@ -1292,7 +1308,7 @@ MOJp3 <- ggplot()+
   geom_smooth(data = MOJsw,  aes(x = d18O.mean, y= D17O_pmg), method = "lm", se = TRUE, color = MOJcolor.minor)+
   MStheme_isos+
   xlab(expression(delta^"18"*"O (\u2030)"))+
-  ylab(expression(Delta^"'17"*"O (pmg)")) +
+  ylab(expression(Delta^"'17"*"O (per meg)")) +
   scale_x_continuous(limits = c(-14,12), expand = c(0, 0), breaks=seq(-10,10,5)) +
   scale_y_continuous(limits = c(-155,50), expand = c(0,0), breaks = seq(-150, 40, 30))  
 
@@ -1305,7 +1321,7 @@ MOJsumm <- ggarrange(MOJp1, MOJp2, MOJp3, ncol = 3, common.legend = TRUE, legend
 
 MOJsumm
 
-#ESGR three plots
+##ESGR three plots#
 ESGRp1 <- ggplot()+
   geom_point(data = ESGRprecip, aes(x = d18O.mean, y= d2H.mean),fill = ESGRcolor, size = 3, shape = 22)+
   geom_point(data = ESGRmetw[ESGRmetw$Water.Type != "Precipitation",], aes(x = d18O.mean, y= d2H.mean),fill = ESGRcolor, size = 3, shape = 23)+
@@ -1317,6 +1333,7 @@ ESGRp1 <- ggplot()+
   
   geom_smooth(data = ESGRprecip,  aes(x = d18O.mean, y= d2H.mean), method = "lm", se = TRUE, color = ESGRcolor)+
   geom_smooth(data = ESGRsw,  aes(x = d18O.mean, y= d2H.mean), method = "lm", se = TRUE, color = ESGRcolor.minor)+
+  geom_abline(slope = 8, intercept = 10, color = "black", linetype = 2)+
   
   
   MStheme_isos+
@@ -1370,7 +1387,7 @@ ESGRp3 <- ggplot()+
   geom_smooth(data = ESGRsw,  aes(x = d18O.mean, y= D17O_pmg), method = "lm", se = TRUE, color = ESGRcolor.minor)+
   MStheme_isos+
   xlab(expression(delta^"18"*"O (\u2030)"))+
-  ylab(expression(Delta^"'17"*"O (pmg)")) +
+  ylab(expression(Delta^"'17"*"O (per meg)")) +
   
   scale_x_continuous(limits = c(-25,1), expand = c(0, 0), breaks=seq(-25,0,5)) +
   scale_y_continuous(limits = c(-50,70), expand = c(0, 0), breaks=seq(-50,70,20)) 
@@ -1382,6 +1399,9 @@ ESGRp3
 ESGRsumm <- ggarrange(ESGRp1, ESGRp2, ESGRp3, ncol = 3, common.legend = TRUE, legend = "none")
 
 multipanelsumm <- ggarrange(REYsumm, JORsumm, MOJsumm, ESGRsumm, nrow = 4)
+
+multipanelsumm
+
 ggsave(filename = "isos_summ_rescaled.pdf", plot = multipanelsumm, device = cairo_pdf, height=8.25,width=10.75, path = path.to.figs.refined)
 #not working, not sure why not, will extract in illustrator
 #iso_summ_leg <- get_legend(multipanelsumm)
@@ -1415,7 +1435,7 @@ plines <- ggplot()+
   geom_smooth(data = ESGRsw,  aes(x = d18O.mean, y= d2H.mean), method = "lm", se = TRUE, color = ESGRcolor.minor)+
 
   #add in a MWL for comparison
-  geom_abline(intercept = 10, slope = 8)+
+  geom_abline(intercept = 10, slope = 8, linetype = 2)+
 
   xlab(expression(delta^"18"*"O (\u2030)"))+
   ylab(expression(delta^"2"*"H (\u2030)"))+
@@ -1440,8 +1460,8 @@ plines2 <- ggplot()+
   geom_point(data = JORmetw, aes(x = d18O.mean, y= d_excess.mean), fill = JORcolor, size = 3, shape = 22 )+
   geom_point(data = JORsw, aes(x = d18O.mean, y= d_excess.mean), fill = JORcolor.minor, size = 3, shape = 21 )+
   
- # geom_point(data = ESGRmetw, aes(x = d18O.mean, y= d_excess.mean),fill = ESGRcolor, size = 3, shape = 22)+
- # geom_point(data = ESGRsw, aes(x = d18O.mean, y= d_excess.mean), fill = ESGRcolor.minor, size = 3, shape= 21)+
+  geom_point(data = ESGRmetw, aes(x = d18O.mean, y= d_excess.mean),fill = ESGRcolor, size = 3, shape = 22)+
+  geom_point(data = ESGRsw, aes(x = d18O.mean, y= d_excess.mean), fill = ESGRcolor.minor, size = 3, shape= 21)+
   
   #lines
   geom_smooth(data = REYmetw,  aes(x = d18O.mean, y= d_excess.mean), method = "lm", se = TRUE, color = REYcolor)+
@@ -1453,8 +1473,8 @@ plines2 <- ggplot()+
   geom_smooth(data = JORmetw,  aes(x = d18O.mean, y= d_excess.mean), method = "lm", se = TRUE, color = JORcolor)+
   geom_smooth(data = JORsw,  aes(x = d18O.mean, y= d_excess.mean), method = "lm", se = TRUE, color = JORcolor.minor)+
   
-  #geom_smooth(data = ESGRmetw,  aes(x = d18O.mean, y= d_excess.mean), method = "lm", se = TRUE, color = ESGRcolor)+
- # geom_smooth(data = ESGRsw,  aes(x = d18O.mean, y= d_excess.mean), method = "lm", se = TRUE, color = ESGRcolor.minor)+
+  geom_smooth(data = ESGRmetw,  aes(x = d18O.mean, y= d_excess.mean), method = "lm", se = TRUE, color = ESGRcolor)+
+  geom_smooth(data = ESGRsw,  aes(x = d18O.mean, y= d_excess.mean), method = "lm", se = TRUE, color = ESGRcolor.minor)+
   
   #add in a MWL for comparison
   #geom_abline(intercept = 10, slope = 8)+
@@ -1501,7 +1521,7 @@ plines3 <- ggplot()+
   #geom_abline(intercept = 10, slope = 8)+
   
   xlab(expression(delta^"18"*"O (\u2030)"))+
-  ylab(expression(Delta^"'17"*"O (pmg)")) +
+  ylab(expression(Delta^"'17"*"O (per meg)")) +
   scale_x_continuous(limits = c(-25,15), expand = c(0, 0), breaks=seq(-25,15,5)) +
   scale_y_continuous(limits = c(-155,52), expand = c(0,0), breaks = seq(-150, 50, 50))  +
   MStheme_isos
@@ -1515,8 +1535,9 @@ alltogethersumm <- ggarrange(plines, plines2, plines3, nrow = 1, ncol = 3, legen
 alltogethersumm
 ggsave(filename = "alltogethersumm.pdf", plot = alltogethersumm, device = cairo_pdf, height=3,width=10, path = path.to.figs) 
 
+multipanelsumm_5panels <- ggarrange(REYsumm, JORsumm, MOJsumm, ESGRsumm,alltogethersumm, nrow = 5) 
 
-multipanelsumm_5panels <- ggarrange(REYsumm, JORsumm, MOJsumm, ESGRsumm,alltogethersumm, nrow = 5)
-ggsave(filename = "isos_summ_5panels.pdf", plot = multipanelsumm_5panels, width=8.4,height=10.5, path = path.to.figs.refined)
+path.to.figs.postR1 <- "~/Documents/Soil Water 17O Manuscript/code_figures/MS_figures_postR1/" 
+ggsave(filename = "isos_summ_5panels.pdf", plot = multipanelsumm_5panels, width=8.4,height=10.5, device = cairo_pdf, path = path.to.figs.postR1)
 
 
