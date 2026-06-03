@@ -128,18 +128,24 @@ Alexandre.pw <-read_delim("~/Documents/Soil Water 17O Manuscript/data/AlexandreA
 
 
 
-######## STATISTIC ON d-excess, D17O correlation
-
-DD<- lm(sw$D17O_pmg~sw$d_excess.mean)
-summary(DD)
+######## STATISTIC ON d-excess, D17O correlation for soil water and precipitation, this study only
 
 d18OD17Olm<- lm(sw$D17O_pmg~sw$d18O.mean)
 summary(d18OD17Olm)
 
+precip_only <- mw[mw$Water.Type == "Precipitation",]
+d18OD17Olm_precip<- lm(precip_only$D17O_pmg~precip_only$d18O.mean)
+summary(d18OD17Olm_precip)
+
+DD_sw<- lm(sw$D17O_pmg~sw$d_excess.mean)
+summary(DD)
+
+DD_precip <-lm(precip_only$D17O_pmg~precip_only$d_excess.mean)
+summary(DD_precip)
 ########FIGURES #######
 
 d18O_D17O <- ggplot() + 
-  geom_point(data=plant.water, aes(x=dp18O,y=(dp17O-0.528*dp18O)*1000), color="darkgreen",size=1.5, shape = 17) + #triangle
+ geom_point(data=plant.water, aes(x=dp18O,y=(dp17O-0.528*dp18O)*1000), color="darkgreen",size=1.5, shape = 17) + #triangle
   geom_point(data=precipitation, aes(x=dp18O,y=(dp17O-0.528*dp18O)*1000), color="gray",size=1.5, shape = 15) + #rectanlge
   geom_point(data=surface.water, aes(x=dp18O,y=(dp17O-0.528*dp18O)*1000), color="firebrick",size=1.5, shape = 15) + #rectangle
   
@@ -164,7 +170,10 @@ d18O_D17O <- ggplot() +
   #scale_x_continuous(limits = c(-76,35), expand = c(0, 0), breaks=seq(-75,25,25)) +
   #scale_y_continuous(limits = c(-290,120), expand = c(0, 0), breaks=seq(-200,100,100)) +
   
-  geom_line(data = BAdf[BAdf$z>BAdf$z_ef[1],], aes(x = d18Osw, y = D17Osw), size = 1, shape = 21, color = "black")+
+  geom_line(data = BAdf[BAdf$z>BAdf$z_ef[1],], aes(x = d18Osw, y = D17Osw), size = 1, color = "black")+
+  geom_smooth(data = mw[mw$Water.Type == "Precipitation",], aes(x = d18O.mean, y = D17O_pmg), method = 'lm', se = TRUE, color = "black", linetype = "dotdash", size = 0.5)+
+  geom_smooth(data = sw, aes(x = d18O.mean, y = D17O_pmg), method = 'lm', se = TRUE, color = "black", linetype = 2, size = 0.5)+
+  
   #geom_abline(slope = d18OD17Olm$coefficients[2], intercept = d18OD17Olm$coefficients[1])+
   theme(legend.position ="right") + 
   labs(x=expression(delta*"'"^"18"*"O (\u2030, VSMOW-SLAP)"), y=expression(Delta*"'"^"17"*"O (per meg, VSMOW-SLAP)")) +
@@ -200,7 +209,11 @@ dxs_D17O_2 <- ggplot()+
   geom_point(aes(x = sw$d_excess.mean, y= sw$D17O_pmg, fill = sw$siteID.1 ),shape = 21, size = 3)+
   scale_fill_manual(name=" ", values = site.1.colors.minor)+
   
-  geom_line(data = BAdfMOJ[BAdf$z>BAdf$z_ef[1],], aes(x = d.excess, y = D17Osw), size = 1,color = "black")+
+  geom_line(data = BAdf[BAdf$z>BAdf$z_ef[1],], aes(x = d.excess, y = D17Osw), size = 1,color = "black")+
+  geom_smooth(data = mw[mw$Water.Type == "Precipitation",], aes(x = d_excess.mean, y = D17O_pmg), method = 'lm', se = TRUE, color = "black", linetype = "dotdash", size = 0.5)+
+  geom_smooth(data = sw, aes(x = d_excess.mean, y = D17O_pmg), method = 'lm', se = TRUE, color = "black", linetype = 2, size = 0.5)+
+  
+  
   #geom_abline(intercept = DD$coefficients[1], slope = DD$coefficients[2])+
   scale_x_continuous(limits = c(-155,40), expand = c(0, 0), breaks=seq(-150,30,30)) +
   scale_y_continuous(limits = c(-205,110), expand = c(0,0), breaks = seq(-200, 100, 50))  +
@@ -210,6 +223,8 @@ plot(dxs_D17O_2)
 
 isoscompare <- ggarrange(d18O_D17O, dxs_D17O_2, nrow =1, ncol =2, common.legend = TRUE)
 isoscompare
-ggsave(filename = "isos_compare_wAlexandre.pdf", plot = isoscompare, device = cairo_pdf, height=6,width=10.75, path = path.to.figs.refined)
+path.to.figs.postR1 <- "~/Documents/Soil Water 17O Manuscript/code_figures/MS_figures_postR1/" 
+
+ggsave(filename = "isos_compare_wAlexandre.pdf", plot = isoscompare, device = cairo_pdf, height=6,width=10.75, path = path.to.figs.postR1)
 
 
