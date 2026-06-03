@@ -508,7 +508,6 @@ timep
 ggsave(filename = "ptime_MOJ.pdf", plot = timep, device = cairo_pdf, width=10.75,height=8.25, path = path.to.figs.refined)
 
 
-#for Purdue talk - MOJ
 ptimeSMMOJ <- ggplot()+
   #geom_line(data = CRSclim, aes(x = Date, y= VWC_1_5_avg), color = "black")+
   geom_line(data = CRSclim, aes(x = Date, y= VWC_1_25_avg), color = MOJcolor)+
@@ -632,6 +631,12 @@ NOAAclim <- read.csv(file = "~/Documents/Soil Water 17O Manuscript/data/climo da
 ESGRdailyP <- NOAAclim %>%
   group_by(DATE) %>%
   summarise(PRCP = mean(PRCP, na.rm = TRUE))
+
+ESGRdailyP$YEAR <- year(ESGRdailyP$DATE)
+
+ESGR_AnnualP <- ESGRdailyP %>%
+  group_by(YEAR) %>%
+  summarise(YEAR_PRCP = sum(PRCP, na.rm = TRUE))
 
 #soil moisutre data, cleaned up in code "ESGR_logger_viz.R", data presented in Kelson 2024 papers
 ESGRSM <- read.csv(file = "~/Documents/Soil Water 17O Manuscript/data/climo data/ESGR climo data/ESGR_SM_combined_forR_clean.csv") #some continuous data
